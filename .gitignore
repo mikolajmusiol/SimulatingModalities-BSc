@@ -3,3 +3,6 @@ models/
 tufts/
 venv/
 woundsDB/
+*.pyc
+logs/
+visualizations/

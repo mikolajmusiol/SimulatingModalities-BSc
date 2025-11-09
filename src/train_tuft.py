@@ -1,49 +1,49 @@
-from torch.utils.data import DataLoader
-
-from src.callbacks import EarlyStopper
-from src.discriminator import Discriminator
-from src.generator import Generator
+import torch
 import torch.optim as optim
 
+from pathlib import Path
+from torch.utils.data import DataLoader
+from src.callbacks import EarlyStopper
+from src.data import CustomDataset
+from src.discriminator import Discriminator
+from src.generator import Generator
+from src.logger import Logger
+from src.metrics import Metrics
+from src.tuft_loader import Loader
+from sklearn.model_selection import train_test_split
 from src.inference import visualize_image
 from src.loss import discriminator_loss, generator_loss
-from src.metrics import Metrics
-from src.logger import Logger
-from src.data import Loader, CustomDataset
-import torch
-from pathlib import Path
 
-#Hyperparameters
-model_name = 'train1-10_val4'
-epochs = 10
+model_name = 'tuft1'
+epochs = 1
 batch_size = 16
-training_folds = [1,2,3,5,6,7,8,9,10]
-validation_folds = [4]
 
 gen_optimizer_lr = 2e-4
 disc_optimizer_lr = 2e-4
 #######################################
 
 early_stopper = EarlyStopper(patience=75, min_delta=1)
+stop_early = False
 generator = Generator().cuda()
 discriminator = Discriminator().cuda()
 gen_optimizer = optim.Adam(generator.parameters(), lr=gen_optimizer_lr, betas=(0.5, 0.999))
 disc_optimizer = optim.Adam(discriminator.parameters(), lr=disc_optimizer_lr, betas=(0.5, 0.999))
 
 metrics = Metrics()
-logger = Logger(f'D:\\Projekty\\woundprocessing\\modal_simulation\\logs\\{model_name}')
-loader = Loader('D:\\Projekty\\woundprocessing\\data\\')
-inference_dir = f'D:\\Projekty\\woundprocessing\\modal_simulation\\visualizations\\{model_name}\\'
-Path(f'D:\\Projekty\\woundprocessing\\modal_simulation\\visualizations\\{model_name}').mkdir(parents=True, exist_ok=True)
+logger = Logger(f'C:\\Users\\OL4F\\Desktop\\Inzynierka\\SimulatingModalities-BSc\\logs\\{model_name}')
+loader = Loader(f'C:\\Users\\OL4F\\Desktop\\Inzynierka\\SimulatingModalities-BSc')
+inference_dir = f'C:\\Users\\OL4F\\Desktop\\Inzynierka\\SimulatingModalities-BSc\\visualizations\\{model_name}\\'
+Path(f'C:\\Users\\OL4F\\Desktop\\Inzynierka\\SimulatingModalities-BSc\\visualizations\\{model_name}').mkdir(parents=True, exist_ok=True)
 
-train_rgb_images, train_ir_images = loader.load(folds=training_folds)
-train_dataset = CustomDataset(train_rgb_images, train_ir_images, transform=None)
+rgb_images, ir_images = loader.load()
+rgb_train, ir_train, rgb_val, ir_val = train_test_split(rgb_images, ir_images, test_size=0.2, random_state=42)
 
-validation_rgb_images, validation_ir_images = loader.load(folds=validation_folds)
-validation_dataset = CustomDataset(validation_rgb_images, validation_ir_images, transform=None)
+train_dataset = CustomDataset(rgb_train, ir_train, transform=None)
+validation_dataset = CustomDataset(rgb_val, ir_val, transform=None)
 
 train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=False)
 validation_loader = DataLoader(validation_dataset, batch_size=batch_size, shuffle=False)
+
 
 def train_step(input_image, target):
     gen_optimizer.zero_grad()
@@ -124,5 +124,5 @@ def training_loop(stop_early, output_dir):
     torch.save(generator.state_dict(), f'{output_dir + model_name}\\generator.pth')
     torch.save(discriminator.state_dict(), f'{output_dir + model_name}\\discriminator.pth')
 
-if __name__ == "__main__":
-    training_loop()
+if __name__ == '__main__':
+    training_loop(stop_early, "C:\\Users\\OL4F\\Desktop\\Inzynierka\\SimulatingModalities-BSc\\models\\")
