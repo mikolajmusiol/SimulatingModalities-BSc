@@ -10,19 +10,18 @@ from src.generator import Generator
 from src.logger import Logger
 from src.metrics import Metrics
 from src.tuft_loader import Loader
-from sklearn.model_selection import train_test_split
 from src.inference import visualize_image
 from src.loss import discriminator_loss, generator_loss
 
-model_name = 'tuft1'
-epochs = 1
+model_name = 'tuft2'
+epochs = 20
 batch_size = 16
 
 gen_optimizer_lr = 2e-4
 disc_optimizer_lr = 2e-4
 #######################################
 
-early_stopper = EarlyStopper(patience=75, min_delta=1)
+early_stopper = EarlyStopper(patience=5, min_delta=1)
 stop_early = False
 generator = Generator().cuda()
 discriminator = Discriminator().cuda()
@@ -36,7 +35,14 @@ inference_dir = f'C:\\Users\\OL4F\\Desktop\\Inzynierka\\SimulatingModalities-BSc
 Path(f'C:\\Users\\OL4F\\Desktop\\Inzynierka\\SimulatingModalities-BSc\\visualizations\\{model_name}').mkdir(parents=True, exist_ok=True)
 
 rgb_images, ir_images = loader.load()
-rgb_train, ir_train, rgb_val, ir_val = train_test_split(rgb_images, ir_images, test_size=0.2, random_state=42)
+
+rgb_split_index = int(len(rgb_images) * 0.8)
+rgb_train = rgb_images[:rgb_split_index]
+rgb_val = rgb_images[rgb_split_index:]
+
+ir_split_index = int(len(ir_images) * 0.8)
+ir_train = ir_images[:ir_split_index]
+ir_val = ir_images[ir_split_index:]
 
 train_dataset = CustomDataset(rgb_train, ir_train, transform=None)
 validation_dataset = CustomDataset(rgb_val, ir_val, transform=None)

@@ -26,14 +26,14 @@ class Metrics():
         snr = SignalNoiseRatio()
         self.snr = snr(generated_image, target_image)
 
-        psnr = torchmetrics.image.PeakSignalNoiseRatio()
+        #psnr = torchmetrics.image.PeakSignalNoiseRatio()
         ssim = torchmetrics.image.StructuralSimilarityIndexMeasure(data_range=1.0)
 
         if len(generated_image.shape) == 3 and len(target_image.shape) == 3:
             generated_image = generated_image.unsqueeze(0).permute(0, 3, 1, 2)
             target_image = target_image.unsqueeze(0).permute(0, 3, 1, 2)
 
-        self.psnr = psnr(generated_image, target_image)
+        self.psnr = 0 #psnr(generated_image, target_image)
         self.ssim = ssim(generated_image, target_image)
 
     def compute_mse(self, output, target):
