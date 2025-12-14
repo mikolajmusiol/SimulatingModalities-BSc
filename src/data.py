@@ -6,7 +6,7 @@ import numpy as np
 from torch.utils.data import Dataset
 
 
-class Loader():
+class Loader:
     def __init__(self, proj_path):
         self.proj_path = proj_path
 

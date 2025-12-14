@@ -1,6 +1,7 @@
 .idea/
 models/
 tufts/
+tufts_backup/
 venv/
 woundsDB/
 *.pyc

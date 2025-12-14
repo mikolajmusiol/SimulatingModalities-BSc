@@ -42,7 +42,7 @@ def visualize_image(model, dataset, image=0, error_threshold=None, save_dir=None
 
         metrics_array = []
         for name, value in zip(metrics.names_list, metrics.get_metrics()):
-            metrics_array.append(f"{name}: {value}")
+            metrics_array.append(f"{name}: {round(value, 3)}")
 
         plt.subplots_adjust(bottom=0.1)
         f.tight_layout()
