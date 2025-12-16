@@ -1,8 +1,7 @@
 import torch
 import torch.optim as optim
 from pathlib import Path
-from torch.utils.data import DataLoader
-from sklearn.model_selection import train_test_split
+from torch.utils.data import DataLoader, ConcatDataset
 
 from src.callbacks import EarlyStopper
 from src.data import CustomDataset
@@ -14,17 +13,17 @@ from src.data import Loader
 from src.inference import visualize_image
 from src.loss import discriminator_loss, generator_loss
 
-model_name = 'tuft11_5_finetuned_3'
+model_name = 'benchmark_val2_e200_ft_tuft_11'
 
 PATH_TO_OLD_GEN = r"C:\Users\OL4F\Desktop\Inzynierka\SimulatingModalities-BSc\models\tuft11_5\generator.pth"
 PATH_TO_OLD_DISC = r"C:\Users\OL4F\Desktop\Inzynierka\SimulatingModalities-BSc\models\tuft11_5\discriminator.pth"
 
 NEW_DATA_PATH = "C:\\Users\\OL4F\\Desktop\\Inzynierka\\SimulatingModalities-BSc\\woundsDB\\data\\"
 
-epochs = 50
-batch_size = 8
-training_folds = [1,2,3,4,5,6,7,8,9]
-validation_folds = [10]
+epochs = 200
+batch_size = 16
+training_folds = [1,3,4,5,6,7,8,9,10]
+validation_folds = [2]
 
 gen_optimizer_lr = 1e-5
 disc_optimizer_lr = 1e-5
@@ -44,8 +43,8 @@ def load_weights_safe(model, path):
         print(f"Error: {e}")
 
 
-early_stopper = EarlyStopper(patience=5, min_delta=1)
-stop_early = True
+early_stopper = EarlyStopper(patience=10, min_delta=0)
+stop_early = False
 
 generator = Generator().cuda()
 discriminator = Discriminator().cuda()
@@ -71,10 +70,10 @@ inference_dir = f'C:\\Users\\OL4F\\Desktop\\Inzynierka\\SimulatingModalities-BSc
 Path(inference_dir).mkdir(parents=True, exist_ok=True)
 
 train_rgb_images, train_ir_images = loader.load(folds=training_folds)
-train_dataset = CustomDataset(train_rgb_images, train_ir_images, transform=None)
+train_dataset = CustomDataset(train_rgb_images, train_ir_images, augment=False)
 
 validation_rgb_images, validation_ir_images = loader.load(folds=validation_folds)
-validation_dataset = CustomDataset(validation_rgb_images, validation_ir_images, transform=None)
+validation_dataset = CustomDataset(validation_rgb_images, validation_ir_images, augment=False)
 
 train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=False)
 validation_loader = DataLoader(validation_dataset, batch_size=batch_size, shuffle=False)
@@ -148,9 +147,6 @@ def validate_epoch(data_loader, epoch):
 
 
 def training_loop(stop_early, output_dir):
-    print(f"Rozpoczynanie fine-tuningu modelu: {model_name}")
-    print(f"Ilość danych treningowych: {len(train_dataset)}")
-
     for epoch in range(epochs):
         train_epoch(train_loader, epoch)
         validation_gen_loss = validate_epoch(validation_loader, epoch)
@@ -160,13 +156,13 @@ def training_loop(stop_early, output_dir):
             print("Early stopping triggered!")
             break
 
-        visualize_image(generator.cuda(), validation_dataset, save_dir=f'{inference_dir}\\{epoch}', metrics=True)
+        if epoch % 10 == 0:
+            visualize_image(generator.cuda(), validation_dataset, save_dir=f'{inference_dir}\\{epoch}', metrics=True)
 
     final_output_path = output_dir + model_name
     Path(final_output_path).mkdir(parents=True, exist_ok=True)
     torch.save(generator.state_dict(), f'{final_output_path}\\generator.pth')
     torch.save(discriminator.state_dict(), f'{final_output_path}\\discriminator.pth')
-    print("Fine-tuning zakończony. Modele zapisane.")
 
 
 if __name__ == '__main__':

@@ -14,33 +14,35 @@ import torch
 from pathlib import Path
 
 #Hyperparameters
-model_name = 'train1-10_val4'
-epochs = 10
+model_name = 'benchmark_val10_e100'
+epochs = 100
 batch_size = 16
-training_folds = [1,2,3,5,6,7,8,9,10]
-validation_folds = [4]
+training_folds = [1, 2, 3, 4, 5, 6, 7, 8, 9]
+validation_folds = [10]
 
 gen_optimizer_lr = 2e-4
 disc_optimizer_lr = 2e-4
+
+early_stopper = EarlyStopper(patience=10, min_delta=0)
+stop_early = False
 #######################################
 
-early_stopper = EarlyStopper(patience=75, min_delta=1)
 generator = Generator().cuda()
 discriminator = Discriminator().cuda()
 gen_optimizer = optim.Adam(generator.parameters(), lr=gen_optimizer_lr, betas=(0.5, 0.999))
 disc_optimizer = optim.Adam(discriminator.parameters(), lr=disc_optimizer_lr, betas=(0.5, 0.999))
 
 metrics = Metrics()
-logger = Logger(f'D:\\Projekty\\woundprocessing\\modal_simulation\\logs\\{model_name}')
-loader = Loader('D:\\Projekty\\woundprocessing\\data\\')
-inference_dir = f'D:\\Projekty\\woundprocessing\\modal_simulation\\visualizations\\{model_name}\\'
-Path(f'D:\\Projekty\\woundprocessing\\modal_simulation\\visualizations\\{model_name}').mkdir(parents=True, exist_ok=True)
+logger = Logger(f'C:\\Users\\OL4F\\Desktop\\Inzynierka\\SimulatingModalities-BSc\\logs\\{model_name}')
+loader = Loader("C:\\Users\\OL4F\\Desktop\\Inzynierka\\SimulatingModalities-BSc\\woundsDB\\data\\")
+inference_dir = f'C:\\Users\\OL4F\\Desktop\\Inzynierka\\SimulatingModalities-BSc\\visualizations\\{model_name}\\'
+Path(f'C:\\Users\\OL4F\\Desktop\\Inzynierka\\SimulatingModalities-BSc\\visualizations\\{model_name}').mkdir(parents=True, exist_ok=True)
 
 train_rgb_images, train_ir_images = loader.load(folds=training_folds)
-train_dataset = CustomDataset(train_rgb_images, train_ir_images, transform=None)
+train_dataset = CustomDataset(train_rgb_images, train_ir_images, augment=False)
 
 validation_rgb_images, validation_ir_images = loader.load(folds=validation_folds)
-validation_dataset = CustomDataset(validation_rgb_images, validation_ir_images, transform=None)
+validation_dataset = CustomDataset(validation_rgb_images, validation_ir_images, augment=False)
 
 train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=False)
 validation_loader = DataLoader(validation_dataset, batch_size=batch_size, shuffle=False)
@@ -116,8 +118,7 @@ def training_loop(stop_early, output_dir):
         if stop_early and early_stopper.early_stop(validation_gen_loss):
             break
 
-        if epoch % 10 == 0:
-            visualize_image(generator.cuda(), validation_dataset, save_dir=f'{inference_dir}\\{epoch}', metrics=True)
+        visualize_image(generator.cuda(), validation_dataset, save_dir=f'{inference_dir}\\{epoch}', metrics=True)
         print(f"Completed epoch {epoch + 1}/{epochs}")
 
     Path(output_dir + model_name).mkdir(parents=True, exist_ok=True)
@@ -125,4 +126,4 @@ def training_loop(stop_early, output_dir):
     torch.save(discriminator.state_dict(), f'{output_dir + model_name}\\discriminator.pth')
 
 if __name__ == "__main__":
-    training_loop()
+    training_loop(stop_early, "C:\\Users\\OL4F\\Desktop\\Inzynierka\\SimulatingModalities-BSc\\models\\")
