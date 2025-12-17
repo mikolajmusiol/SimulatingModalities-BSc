@@ -14,11 +14,11 @@ import torch
 from pathlib import Path
 
 #Hyperparameters
-model_name = 'benchmark_val10_e100'
-epochs = 100
+model_name = 'benchmark_val2_e200'
+epochs = 200
 batch_size = 16
-training_folds = [1, 2, 3, 4, 5, 6, 7, 8, 9]
-validation_folds = [10]
+training_folds = [1, 3, 4, 5, 6, 7, 8, 9, 10]
+validation_folds = [2]
 
 gen_optimizer_lr = 2e-4
 disc_optimizer_lr = 2e-4
@@ -118,7 +118,8 @@ def training_loop(stop_early, output_dir):
         if stop_early and early_stopper.early_stop(validation_gen_loss):
             break
 
-        visualize_image(generator.cuda(), validation_dataset, save_dir=f'{inference_dir}\\{epoch}', metrics=True)
+        if epoch % 10 == 0:
+            visualize_image(generator.cuda(), validation_dataset, save_dir=f'{inference_dir}\\{epoch}', metrics=True)
         print(f"Completed epoch {epoch + 1}/{epochs}")
 
     Path(output_dir + model_name).mkdir(parents=True, exist_ok=True)

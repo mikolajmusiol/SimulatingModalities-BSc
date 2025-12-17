@@ -2,12 +2,17 @@ import torch
 import numpy as np
 import torchmetrics
 
+import torch
+import numpy as np
+import torchmetrics
+
 
 class Metrics:
     def __init__(self, device='cuda'):
         self.device = device
         self.names_list = ['mse', 'nmse', 'rmse', 'mae', 'psnr', 'ssim']
 
+        # Ensure metrics are on the correct device
         self.psnr_metric = torchmetrics.image.PeakSignalNoiseRatio(data_range=2.0).to(device)
         self.ssim_metric = torchmetrics.image.StructuralSimilarityIndexMeasure(data_range=2.0).to(device)
         self.results = {}
@@ -19,7 +24,7 @@ class Metrics:
     def get_metrics(self):
         return np.array([self.results[n] for n in self.names_list])
 
-    def calculate_metrics(self, generated_image, target_image):
+    def calculate_metrics(self, generated_image, target_image, roi=None):
         if generated_image.device != self.device:
             generated_image = generated_image.to(self.device)
             target_image = target_image.to(self.device)
@@ -30,6 +35,16 @@ class Metrics:
 
             generated_image = generated_image.unsqueeze(0)
             target_image = target_image.unsqueeze(0)
+
+        if roi is not None:
+            x, y, w, h = roi
+            h_max, w_max = generated_image.shape[2], generated_image.shape[3]
+
+            y_end = min(y + h, h_max)
+            x_end = min(x + w, w_max)
+
+            generated_image = generated_image[..., y:y_end, x:x_end]
+            target_image = target_image[..., y:y_end, x:x_end]
 
         gen_flat = generated_image.reshape(-1)
         target_flat = target_image.reshape(-1)

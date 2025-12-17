@@ -28,8 +28,8 @@ def weights_init(m):
         nn.init.constant_(m.bias.data, 0)
 
 
-model_name = 'tuft11_5'
-epochs = 5
+model_name = 'tuft12_200'
+epochs = 200
 batch_size = 16
 
 gen_optimizer_lr = 2e-4
@@ -37,7 +37,7 @@ disc_optimizer_lr = 2e-4
 #######################################
 
 early_stopper = EarlyStopper(patience=5, min_delta=1)
-stop_early = True
+stop_early = False
 generator = Generator().cuda()
 discriminator = Discriminator().cuda()
 
@@ -55,11 +55,11 @@ Path(f'C:\\Users\\OL4F\\Desktop\\Inzynierka\\SimulatingModalities-BSc\\visualiza
 
 X, y = loader.load()
 
-X_train, X_temp, y_train, y_temp = train_test_split(X, y, test_size=0.2, random_state=42)
-X_val, X_test, y_val, y_test = train_test_split(X_temp, y_temp, test_size=0.5, random_state=42)
+X_train, X_val, y_train, y_val = train_test_split(X, y, test_size=0.2, random_state=42)
+#X_val, X_test, y_val, y_test = train_test_split(X_temp, y_temp, test_size=0.5, random_state=42)
 
-train_dataset = CustomDataset(X_train, y_train, transform=None)
-validation_dataset = CustomDataset(X_val, y_val, transform=None)
+train_dataset = CustomDataset(X_train, y_train, augment=True)
+validation_dataset = CustomDataset(X_val, y_val, augment=False)
 
 train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=False)
 validation_loader = DataLoader(validation_dataset, batch_size=batch_size, shuffle=False)
@@ -136,8 +136,8 @@ def training_loop(stop_early, output_dir):
         if stop_early and early_stopper.early_stop(validation_gen_loss):
             break
 
-        #if epoch % 2 == 0:
-        visualize_image(generator.cuda(), validation_dataset, save_dir=f'{inference_dir}\\{epoch}', metrics=True)
+        if epoch % 10 == 0:
+            visualize_image(generator.cuda(), validation_dataset, save_dir=f'{inference_dir}\\{epoch}', metrics=True)
         print(f"Completed epoch {epoch + 1}/{epochs}")
 
     Path(output_dir + model_name).mkdir(parents=True, exist_ok=True)

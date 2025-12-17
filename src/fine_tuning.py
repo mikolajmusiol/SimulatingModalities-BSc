@@ -13,7 +13,7 @@ from src.data import Loader
 from src.inference import visualize_image
 from src.loss import discriminator_loss, generator_loss
 
-model_name = 'benchmark_val2_e200_ft_tuft_11'
+model_name = 'benchmark_val2_e200_ft_tuft_12_3'
 
 PATH_TO_OLD_GEN = r"C:\Users\OL4F\Desktop\Inzynierka\SimulatingModalities-BSc\models\tuft11_5\generator.pth"
 PATH_TO_OLD_DISC = r"C:\Users\OL4F\Desktop\Inzynierka\SimulatingModalities-BSc\models\tuft11_5\discriminator.pth"
@@ -52,14 +52,23 @@ discriminator = Discriminator().cuda()
 load_weights_safe(generator, PATH_TO_OLD_GEN)
 load_weights_safe(discriminator, PATH_TO_OLD_DISC)
 
-for param in generator.parameters():
+for param in generator.down_stack.parameters():
     param.requires_grad = False
 
-for name, param in generator.named_parameters():
-    if 'up_stack' in name or 'last' in name:
-        param.requires_grad = True
+for param in generator.up_stack.parameters():
+    param.requires_grad = True
 
-gen_optimizer = optim.Adam(generator.parameters(), lr=gen_optimizer_lr, betas=(0.5, 0.999))
+for param in generator.last.parameters():
+    param.requires_grad = True
+
+generator.down_stack.eval()
+
+gen_optimizer = optim.Adam(
+    filter(lambda p: p.requires_grad, generator.parameters()),
+    lr=gen_optimizer_lr,
+    betas=(0.5, 0.999)
+)
+
 disc_optimizer = optim.Adam(discriminator.parameters(), lr=disc_optimizer_lr, betas=(0.5, 0.999))
 
 metrics = Metrics()
@@ -77,6 +86,25 @@ validation_dataset = CustomDataset(validation_rgb_images, validation_ir_images, 
 
 train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=False)
 validation_loader = DataLoader(validation_dataset, batch_size=batch_size, shuffle=False)
+
+
+def unfreeze_top_encoder_layers(generator, gen_optimizer_lr):
+    print("Unfreezing top 2 encoder layers")
+
+    for block in generator.down_stack[-2:]:
+        for param in block.parameters():
+            param.requires_grad = True
+
+    for block in generator.down_stack[-2:]:
+        block.train()
+
+    new_optimizer = optim.Adam(
+        filter(lambda p: p.requires_grad, generator.parameters()),
+        lr=gen_optimizer_lr * 0.1,
+        betas=(0.5, 0.999)
+    )
+
+    return new_optimizer
 
 
 def train_step(input_image, target):
@@ -147,7 +175,16 @@ def validate_epoch(data_loader, epoch):
 
 
 def training_loop(stop_early, output_dir):
+    global gen_optimizer
+
     for epoch in range(epochs):
+
+        if epoch == 100:
+            gen_optimizer = unfreeze_top_encoder_layers(
+                generator,
+                gen_optimizer_lr
+            )
+
         train_epoch(train_loader, epoch)
         validation_gen_loss = validate_epoch(validation_loader, epoch)
         print(f"Epoch {epoch + 1}/{epochs} - Validation Loss: {validation_gen_loss:.4f}")
@@ -157,7 +194,12 @@ def training_loop(stop_early, output_dir):
             break
 
         if epoch % 10 == 0:
-            visualize_image(generator.cuda(), validation_dataset, save_dir=f'{inference_dir}\\{epoch}', metrics=True)
+            visualize_image(
+                generator.cuda(),
+                validation_dataset,
+                save_dir=f'{inference_dir}\\{epoch}',
+                metrics=True
+            )
 
     final_output_path = output_dir + model_name
     Path(final_output_path).mkdir(parents=True, exist_ok=True)
